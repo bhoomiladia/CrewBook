@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CollabHub",
+  title: "CrewBook",
   description:
     "Collaborate, manage projects, and chat with your teammates — all in one place.",
   generator: "v0.app",
