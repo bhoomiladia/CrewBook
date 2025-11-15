@@ -1,12 +1,16 @@
 'use client'
 
 import React, { useEffect, useState, use } from 'react';
+import Link from 'next/link'; // <-- 1. ADDED IMPORT
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/firebaseConfig';
-import { doc, getDoc, collectionGroup, query, where, getDocs, updateDoc } from 'firebase/firestore';
-import { UserProfile, UserProfileWithId } from '@/lib/types';
+// --- 2. ADDED 'collection' ---
+import { doc, getDoc, collectionGroup, query, where, getDocs, updateDoc, collection } from 'firebase/firestore'; 
+// --- 3. ADDED 'Project' ---
+import { UserProfile, UserProfileWithId, Project } from '@/lib/types'; 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+// --- 4. ADDED 'CardFooter' ---
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -58,6 +62,42 @@ function useUserCollaborationScore(userId?: string) {
   return { score, count, loading };
 }
 
+// --- 5. NEW HOOK: Fetches public projects for a specific user ---
+function useUserPublicProjects(userId?: string) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    
+    const q = query(
+      collection(db, 'projects'), 
+      where('members', 'array-contains', userId),
+      where('isPublic', '==', true)
+    );
+
+    const fetchData = async () => {
+      try {
+        const snapshot = await getDocs(q);
+        const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+        setProjects(projectsData);
+      } catch (error) {
+        console.error("Error fetching public projects:", error);
+        // This query will fail without a composite index.
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [userId]);
+
+  return { projects, loading };
+}
+
 
 export default function ProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
@@ -67,6 +107,8 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
   const [loadingProfile, setLoadingProfile] = useState(true);
   
   const { score, count, loading: loadingScore } = useUserCollaborationScore(userId);
+  // --- 6. CALLED NEW HOOK ---
+  const { projects: publicProjects, loading: loadingProjects } = useUserPublicProjects(userId);
   
   const [isOwner, setIsOwner] = useState(false);
 
@@ -93,7 +135,8 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
     fetchData();
   }, [userId]);
 
-  const isLoading = loadingProfile || loadingScore;
+  // --- 7. ADDED 'loadingProjects' TO isLoading ---
+  const isLoading = loadingProfile || loadingScore || loadingProjects;
 
   if (isLoading) {
     return (
@@ -110,20 +153,17 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       
-      {/* --- 1. THEME: Profile "Cover" --- */}
+      {/* --- Profile "Cover" Card --- */}
       <Card className="overflow-hidden bg-black border-2 border-black shadow-[4px_4px_0px_#000]">
-        {/* This is the black notebook "cover" */}
         <div className="h-32 bg-black"></div> 
         <CardContent className="relative px-6 pt-0 pb-6">
           <div className="flex flex-col md:flex-row items-start md:items-end -mt-20 gap-4">
-            {/* Avatar acts like a "sticker" on the cover */}
             <Avatar className="w-32 h-32 border-4 border-black bg-white shadow-lg">
               <AvatarImage src={profile.photoURL} alt={profile.displayName} />
               <AvatarFallback className="text-3xl text-black">
                 {profile.displayName?.charAt(0).toUpperCase() || '?'}
               </AvatarFallback>
             </Avatar>
-            
             <div className="flex-1 space-y-1 mt-2 md:mt-0">
               <h1 className="text-2xl font-bold leading-none text-white">{profile.displayName}</h1>
               <p className="text-gray-400 flex items-center gap-2">
@@ -131,7 +171,6 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
                 {profile.role || 'Team Member'}
               </p>
             </div>
-
             {isOwner && (
               <EditProfileDialog profile={profile} setProfile={setProfile} />
             )}
@@ -142,7 +181,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
       <div className="grid md:grid-cols-3 gap-6">
         <div className="space-y-6">
           
-          {/* --- 2. THEME: Collaboration Score Card --- */}
+          {/* --- Collaboration Score Card --- */}
           <Card className="bg-white border-2 border-black">
             <CardHeader>
               <CardTitle className="text-lg text-black">Collaboration Score</CardTitle>
@@ -153,7 +192,6 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
                 <span className="text-gray-600">/ 5</span>
               </div>
               <div className="flex items-center gap-1 text-green-500">
-                {/* --- 3. THEME: Stars are now green --- */}
                 <Star className={`h-4 w-4 ${score >= 1 ? 'fill-green-500' : 'fill-gray-200'}`} />
                 <Star className={`h-4 w-4 ${score >= 2 ? 'fill-green-500' : 'fill-gray-200'}`} />
                 <Star className={`h-4 w-4 ${score >= 3 ? 'fill-green-500' : 'fill-gray-200'}`} />
@@ -164,7 +202,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
             </CardContent>
           </Card>
           
-          {/* --- 4. THEME: Details Card --- */}
+          {/* --- Details Card --- */}
           <Card className="bg-white border-2 border-black">
             <CardHeader>
               <CardTitle className="text-lg text-black">Details</CardTitle>
@@ -196,7 +234,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
         </div>
 
         <div className="md:col-span-2 space-y-6">
-          {/* --- 5. THEME: About Card --- */}
+          {/* --- About Card --- */}
           <Card className="bg-white border-2 border-black">
             <CardHeader>
               <CardTitle className="text-lg text-black">About</CardTitle>
@@ -208,7 +246,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
             </CardContent>
           </Card>
 
-          {/* --- 6. THEME: Skills Card --- */}
+          {/* --- Skills Card --- */}
           <Card className="bg-white border-2 border-black">
             <CardHeader>
               <CardTitle className="text-lg text-black">Skills & Expertise</CardTitle>
@@ -228,9 +266,56 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
               </div>
             </CardContent>
           </Card>
+          
+          {/* --- 8. NEW PUBLIC PROJECTS SECTION --- */}
+          <Card className="bg-white border-2 border-black">
+            <CardHeader>
+              <CardTitle className="text-lg text-black">Public Projects</CardTitle>
+              <CardDescription className="text-gray-500">
+                Public projects this user is a member of.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingProjects ? (
+                <div className="flex justify-center items-center h-24">
+                  <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                </div>
+              ) : publicProjects.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No public projects found.</p>
+              ) : (
+                // This is the Scroll Stack container
+                <div className="grid grid-flow-col auto-cols-[80%] md:auto-cols-[48%] gap-4 overflow-x-auto p-1 snap-x snap-mandatory">
+                  {publicProjects.map(project => (
+                    <ProjectStackCard key={project.id} project={project} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* --- END OF NEW SECTION --- */}
+
         </div>
       </div>
     </div>
+  );
+}
+
+// --- 9. NEW COMPONENT: ProjectStackCard ---
+function ProjectStackCard({ project }: { project: Project }) {
+  return (
+    <Link href={`/dashboard/projects/${project.id}`} passHref>
+      <Card className="bg-white border-2 border-black h-full flex flex-col snap-center hover:shadow-[4px_4px_0px_#000] transition-all cursor-pointer">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg text-black truncate">{project.name}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-grow">
+          <p className="text-sm text-gray-600 line-clamp-2">{project.description}</p>
+        </CardContent>
+        <CardFooter>
+          <Badge variant="secondary" className="bg-green-100 text-green-800 border border-green-200">Public</Badge>
+        </CardFooter>
+      </Card>
+    </Link>
   );
 }
 
@@ -245,10 +330,9 @@ function EditProfileDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // Renamed 'bio' to 'about' to match your UserProfile type
   const [displayName, setDisplayName] = useState(profile.displayName || '');
   const [role, setRole] = useState(profile.role || '');
-  const [about, setAbout] = useState(profile.about || ''); // <-- FIX
+  const [about, setAbout] = useState(profile.about || '');
   const [skillsStr, setSkillsStr] = useState(profile.skills?.join(', ') || '');
 
   const handleSave = async () => {
@@ -261,7 +345,7 @@ function EditProfileDialog({
       const newData = {
         displayName,
         role,
-        about: about, // <-- FIX
+        about: about,
         skills: skillsArray
       };
 
@@ -279,7 +363,6 @@ function EditProfileDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* --- 7. THEME: Button Style --- */}
         <Button 
           variant="outline" 
           size="sm" 
@@ -289,7 +372,6 @@ function EditProfileDialog({
           Edit Profile
         </Button>
       </DialogTrigger>
-      {/* --- 8. THEME: Dialog Style --- */}
       <DialogContent className="sm:max-w-[425px] bg-white border-2 border-black">
         <DialogHeader>
           <DialogTitle className="text-black">Edit Profile</DialogTitle>
