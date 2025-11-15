@@ -3,9 +3,9 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import Hero from "@/components/Hero";
+import { TaskBoardSection } from "@/components/TaskBoardSection";
 import { WorkloadSection } from "@/components/WorkloadSection";
 import { ProjectCreationSection } from "@/components/ProjectCreationSection";
-import { TaskBoardSection } from "@/components/TaskBoardSection";
 import { AIInsightsSection } from "@/components/AIInsightsSection";
 import { CommunicationSection } from "@/components/CommunicationSection";
 // import { PeerReviewSection } from "@/components/PeerReviewSection";
@@ -18,8 +18,12 @@ export default function LandingPage() {
   return (
     <div>
       {/* <ThemeToggle/> */}
-      {/* --- 1. FIX: Set background to black --- */}
-      <div className="min-h-screen bg-black">
+      
+      {/* *
+        * FIX: Changed bg-black to bg-[#060010] to match the WorkloadSection
+        *
+      */}
+      <div className="min-h-screen bg-[#060010] relative"> 
         
         <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
           {/* Background Hero with the circle effect */}
@@ -35,7 +39,6 @@ export default function LandingPage() {
             <p className="text-xs sm:text-sm font-medium text-gray-400 mb-1 sm:mb-2">
               A smarter way to collaborate
             </p>
-            {/* --- 2. FIX: Changed text to white --- */}
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight mb-2 sm:mb-4">
               CrewBook
             </h1>
@@ -45,7 +48,6 @@ export default function LandingPage() {
     
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-              {/* --- 3. FIX: Correct onClick syntax --- */}
               <Button
                 size="sm"
                 className="px-6 py-2 text-base font-semibold pointer-events-auto"
@@ -63,14 +65,21 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+
+        {/* *
+          * REMOVED: I've deleted the gradient <div> I added before.
+          * It's no longer needed now that the backgrounds match.
+          *
+        */}
       </div>
       
       {/* These sections come *after* the hero section */}
+      <TaskBoardSection />
       <WorkloadSection />
       <ProjectCreationSection />
-      <TaskBoardSection />
-      <AIInsightsSection />
-      <CommunicationSection />
+      
+      {/* <AIInsightsSection /> */}
+      {/* <CommunicationSection /> */}
       {/* <PeerReviewSection /> */}
     </div>
   );
