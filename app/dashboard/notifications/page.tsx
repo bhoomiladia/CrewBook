@@ -52,13 +52,11 @@ export default function NotificationsPage() {
     if (!currentUser || !notification.projectId) return;
 
     try {
-      // 1. Add user to Project Members
       const projectRef = doc(db, 'projects', notification.projectId);
       await updateDoc(projectRef, {
         members: arrayUnion(currentUser.uid)
       });
 
-      // 2. Mark notification as accepted (or delete it)
       const noteRef = doc(db, 'notifications', notification.id);
       await updateDoc(noteRef, {
         status: 'accepted',
@@ -77,33 +75,49 @@ export default function NotificationsPage() {
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Bell className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">Notifications</h1>
+        <Bell className="h-8 w-8 text-black" />
+        <h1 className="text-3xl font-bold text-black">Notifications</h1>
       </div>
 
       <div className="space-y-4">
         {notifications.length === 0 && (
-          <div className="text-center py-10 text-muted-foreground">
+          <div className="text-center py-10 text-gray-600">
             You're all caught up! No new notifications.
           </div>
         )}
 
         {notifications.map((note) => (
-          <Card key={note.id} className={`${note.status === 'unread' ? 'border-l-4 border-l-primary' : ''}`}>
+          // Styled Card
+          <Card 
+            key={note.id} 
+            className={`bg-white border-2 border-black rounded-lg ${
+              note.status === 'unread' ? 'border-l-4 border-l-blue-500' : ''
+            }`}
+          >
             <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
               
               {/* Icon & Text */}
               <div className="flex items-start gap-4">
-                <div className="mt-1 p-2 bg-muted rounded-full">
-                  {note.type === 'PROJECT_INVITE' ? <Briefcase className="h-5 w-5 text-blue-500" /> : <FileText className="h-5 w-5 text-orange-500" />}
+                {/* Styled Icon Container */}
+                <div className="mt-1 p-2 bg-gray-100 rounded-full border-2 border-black">
+                  {note.type === 'PROJECT_INVITE' ? 
+                    <Briefcase className="h-5 w-5 text-blue-500" /> : 
+                    <FileText className="h-5 w-5 text-orange-500" />
+                  }
                 </div>
                 <div>
-                  <h4 className="font-semibold text-base">{note.message}</h4>
-                  <p className="text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-base text-black">{note.message}</h4>
+                  <p className="text-sm text-gray-600">
                     From {note.senderName} • {note.createdAt?.toDate().toLocaleDateString()}
                   </p>
                   {note.status === 'accepted' && (
-                    <Badge variant="secondary" className="mt-2 text-green-600 bg-green-50">Accepted</Badge>
+                    // Styled Badge
+                    <Badge 
+                      variant="secondary" 
+                      className="mt-2 text-green-600 bg-green-100 border-2 border-green-600 rounded-md"
+                    >
+                      Accepted
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -112,18 +126,35 @@ export default function NotificationsPage() {
               <div className="flex gap-2">
                 {note.type === 'PROJECT_INVITE' && note.status !== 'accepted' && (
                   <>
-                    <Button size="sm" variant="default" onClick={() => handleAcceptInvite(note)}>
+                    {/* Styled Accept Button */}
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      onClick={() => handleAcceptInvite(note)}
+                      className="bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800"
+                    >
                       <Check className="h-4 w-4 mr-1" /> Accept
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleClear(note.id)}>
+                    {/* Styled Decline Button */}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleClear(note.id)}
+                      className="bg-white border-2 border-black rounded-lg text-black hover:bg-gray-100"
+                    >
                       Decline
                     </Button>
                   </>
                 )}
                 
-                {/* For tasks or already accepted invites, just allow clear */}
                 {(note.type === 'TASK_ASSIGNMENT' || note.status === 'accepted') && (
-                   <Button size="sm" variant="ghost" onClick={() => handleClear(note.id)}>
+                   // Styled Clear Button
+                   <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={() => handleClear(note.id)}
+                    className="text-gray-500 hover:text-black hover:bg-gray-100 rounded-lg"
+                   >
                      <X className="h-4 w-4" />
                    </Button>
                 )}

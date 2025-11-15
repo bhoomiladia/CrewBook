@@ -3,10 +3,10 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Task, UserProfile } from '@/lib/types';
-import { UserProfileWithId } from '@/hooks/data/useProjectData'; // Import this
+import { UserProfileWithId } from '@/hooks/data/useProjectData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { db } from '@/firebaseConfig'; // Import db
-import { doc, getDoc } from 'firebase/firestore'; // Import getDoc
+import { db } from '@/firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 import {
   BarChart,
   Bar,
@@ -17,22 +17,18 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
+  CartesianGrid, // Import CartesianGrid
 } from 'recharts';
 
 interface Props {
   tasks: Task[];
-  members: UserProfileWithId[]; // <-- This is the prop we use
+  members: UserProfileWithId[];
 }
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
-// --- Helper hook to get full profiles ---
-// This is now redundant since we pass 'members' as a prop,
-// but we'll fix the workloadData to use the prop.
-
 export function StatsTab({ tasks, members }: Props) {
   
-  // --- 1. Calculate Pie Chart Data ---
   const taskStatusData = useMemo(() => {
     const todo = tasks.filter(t => t.status === 'todo').length;
     const inProgress = tasks.filter(t => t.status === 'inProgress').length;
@@ -44,7 +40,6 @@ export function StatsTab({ tasks, members }: Props) {
     ];
   }, [tasks]);
 
-  // --- 2. Calculate Bar Chart Data (Workload) ---
   const workloadData = useMemo(() => {
     if (!members || members.length === 0) return [];
     
@@ -56,18 +51,27 @@ export function StatsTab({ tasks, members }: Props) {
     });
 
     return members.map(user => ({
-      // --- THIS IS THE FIX ---
-      // Provide fallbacks in case displayName is undefined
       name: (user.displayName || user.email || 'Unknown').split(' ')[0],
-      // --- END FIX ---
       tasks: taskCounts.get(user.id) || 0,
     }));
   }, [tasks, members]);
   
-  // --- 3. Simple Stat Cards ---
   const totalTasks = tasks.length;
   const doneTasks = taskStatusData[2].value;
   const openTasks = taskStatusData[0].value + taskStatusData[1].value;
+
+  // Styled Tooltip from AnalyticsPage
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-2 bg-white border-2 border-black rounded-lg shadow-md">
+          <p className="font-bold text-black">{label}</p>
+          <p className="text-sm text-black">{`${payload[0].name}: ${payload[0].value}`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6">
@@ -80,35 +84,66 @@ export function StatsTab({ tasks, members }: Props) {
 
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
+        {/* Styled Pie Chart Card */}
+        <Card className="bg-white border-2 border-black rounded-lg">
           <CardHeader>
-            <CardTitle>Task Status</CardTitle>
+            <CardTitle className="text-black">Task Status</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={taskStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
+                <Pie 
+                  data={taskStatusData} 
+                  dataKey="value" 
+                  nameKey="name" 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={100} 
+                  fill="#8884d8" 
+                  label 
+                  stroke="#000" // Add black stroke to pie slices
+                  strokeWidth={2}
+                >
                   {taskStatusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Styled Bar Chart Card */}
+        <Card className="bg-white border-2 border-black rounded-lg">
           <CardHeader>
-            <CardTitle>Open Task Workload</CardTitle>
+            <CardTitle className="text-black">Open Task Workload</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={workloadData}>
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="tasks" fill="#8884d8" />
+                {/* Styled Grid, Axes, and Bar */}
+                <CartesianGrid stroke="rgba(0, 0, 0, 0.1)" strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#000" 
+                  tick={{ fill: '#000', fontSize: 12 }} 
+                />
+                <YAxis 
+                  allowDecimals={false} 
+                  stroke="#000" 
+                  tick={{ fill: '#000', fontSize: 12 }} 
+                />
+                <Tooltip 
+                  content={<CustomTooltip />} 
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }} 
+                />
+                <Bar 
+                  dataKey="tasks" 
+                  fill="#8884d8" 
+                  stroke="#000" 
+                  strokeWidth={2} 
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -118,15 +153,15 @@ export function StatsTab({ tasks, members }: Props) {
   );
 }
 
-// Helper component
+// Helper component (Styled)
 function StatCard({ title, value }: { title: string; value: number | string }) {
   return (
-    <Card>
+    <Card className="bg-white border-2 border-black rounded-lg">
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold">{value}</p>
+        <p className="text-3xl font-bold text-black">{value}</p>
       </CardContent>
     </Card>
   );

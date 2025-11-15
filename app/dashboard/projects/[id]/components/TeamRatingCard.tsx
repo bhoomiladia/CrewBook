@@ -48,18 +48,15 @@ export function TeamRatingCard({ projectId, members, currentUserId }: TeamRating
     const ratingRef = doc(db, "projects", projectId, "ratings", ratingId);
     
     try {
-      // 3. Set the rating document. This is allowed by our new rules.
+      // 3. Set the rating document.
       await setDoc(ratingRef, {
         raterId: currentUserId,
         ratedId: ratedMemberId,
         rating: rating,
         createdAt: serverTimestamp(),
-        projectId: projectId, // Add for context
+        projectId: projectId, 
       });
       
-      // 4. We are DONE. We DO NOT update the user's profile here.
-      // This fixes the "Insufficient Permissions" error.
-
     } catch (e) {
       console.error("Error submitting rating: ", e);
       // Revert optimistic update
@@ -75,8 +72,9 @@ export function TeamRatingCard({ projectId, members, currentUserId }: TeamRating
 
   if (loadingRatings) {
     return (
-      <Card>
-        <CardHeader><CardTitle>Loading Ratings...</CardTitle></CardHeader>
+      // Styled Loader Card
+      <Card className="bg-white border-2 border-black rounded-lg">
+        <CardHeader><CardTitle className="text-black">Loading Ratings...</CardTitle></CardHeader>
         <CardContent className="flex justify-center items-center h-24">
           <Loader2 className="h-5 w-5 animate-spin" />
         </CardContent>
@@ -85,30 +83,33 @@ export function TeamRatingCard({ projectId, members, currentUserId }: TeamRating
   }
 
   return (
-    <Card>
+    // Styled Main Card
+    <Card className="bg-white border-2 border-black rounded-lg">
       <CardHeader>
-        <CardTitle>Rate Your Teammates</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-black">Rate Your Teammates</CardTitle>
+        <CardDescription className="text-gray-600">
           Project is complete! Rate your team to help build a culture of accountability.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {teamToRate.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">
+          <p className="text-gray-600 text-center py-4">
             You were the only member on this project.
           </p>
         ) : (
           teamToRate.map(member => (
             <div 
               key={member.id} 
-              className="flex flex-col sm:flex-row items-center justify-between p-3 border rounded-lg bg-background"
+              // Styled list item
+              className="flex flex-col sm:flex-row items-center justify-between p-3 border-2 border-black rounded-lg bg-white"
             >
               <div className="flex items-center gap-3 mb-3 sm:mb-0">
-                <Avatar className="h-8 w-8">
+                {/* Styled Avatar */}
+                <Avatar className="h-8 w-8 border-2 border-black">
                   <AvatarImage src={member.photoURL} alt={member.displayName} />
                   <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className="font-medium">{member.displayName}</span>
+                <span className="font-medium text-black">{member.displayName}</span>
               </div>
               <StarRating
                 currentRating={myRatings.get(member.id) || 0}

@@ -5,12 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area"; // <-- Import ScrollArea
-import { Plus, Mail, Loader2, CheckCircle, Search } from 'lucide-react'; // <-- Import Search
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Mail, Loader2, CheckCircle, Search } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/firebaseConfig";
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
-import { useAllUsers } from "@/hooks/data/useAllUsers"; // <-- Import new hook
+import { useAllUsers } from "@/hooks/data/useAllUsers";
 
 interface Props {
   members: UserProfileWithId[];
@@ -26,32 +26,27 @@ export function MembersTab({ members, leadUID, projectId, name = "Project" }: Pr
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // States for invite logic
-  const [invitingUserId, setInvitingUserId] = useState<string | null>(null); // Tracks loading
-  const [invitedUserIds, setInvitedUserIds] = useState<Set<string>>(new Set()); // Tracks success
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
+  const [invitedUserIds, setInvitedUserIds] = useState<Set<string>>(new Set());
 
-  // Get all users in the system
   const { users: allUsers, loading: loadingUsers } = useAllUsers();
 
-  // Filter out users who are already members or don't match the search
   const usersToInvite = useMemo(() => {
     const memberIds = new Set(members.map(m => m.id));
     return allUsers
-      .filter(user => !memberIds.has(user.id)) // Not already a member
-      .filter(user => // Matches search term
+      .filter(user => !memberIds.has(user.id))
+      .filter(user =>
         user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
   }, [allUsers, members, searchTerm]);
 
-  // This function is now called by clicking the button next to a user
   const handleInvite = async (targetUser: UserProfileWithId) => {
     if (!currentUser || !projectId) return;
 
-    setInvitingUserId(targetUser.id); // Set loading state for this specific user
+    setInvitingUserId(targetUser.id);
 
     try {
-      // 1. Create Notification
       await addDoc(collection(db, "notifications"), {
         recipientId: targetUser.id,
         senderId: currentUser.uid,
@@ -64,21 +59,19 @@ export function MembersTab({ members, leadUID, projectId, name = "Project" }: Pr
         createdAt: serverTimestamp(),
       });
 
-      // 2. Add to "invited" list to change button state
       setInvitedUserIds(prev => new Set(prev).add(targetUser.id));
 
     } catch (err) {
       console.error("Error sending invite:", err);
     } finally {
-      setInvitingUserId(null); // Clear loading state
+      setInvitingUserId(null);
     }
   };
   
-  // Reset search when dialog closes
   const onOpenChange = (open: boolean) => {
     if (!open) {
       setSearchTerm("");
-      setInvitedUserIds(new Set()); // Clear invited list
+      setInvitedUserIds(new Set());
     }
     setIsOpen(open);
   };
@@ -89,28 +82,27 @@ export function MembersTab({ members, leadUID, projectId, name = "Project" }: Pr
         <div className="flex justify-end mb-4">
           <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800">
                 <Plus className="h-4 w-4 mr-2" />
                 Invite Member
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            {/* Styled Dialog */}
+            <DialogContent className="sm:max-w-md bg-white border-2 border-black rounded-lg">
               <DialogHeader>
-                <DialogTitle>Invite Team Member</DialogTitle>
+                <DialogTitle className="text-black">Invite Team Member</DialogTitle>
               </DialogHeader>
               
-              {/* Search Bar */}
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   placeholder="Search by name or email..."
-                  className="pl-8"
+                  className="pl-8 bg-white border-2 border-black rounded-lg placeholder:text-gray-500"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
-              {/* User List */}
               <ScrollArea className="h-64">
                 <div className="space-y-2 pr-4">
                   {loadingUsers ? (
@@ -118,23 +110,23 @@ export function MembersTab({ members, leadUID, projectId, name = "Project" }: Pr
                       <Loader2 className="h-5 w-5 animate-spin" />
                     </div>
                   ) : usersToInvite.length === 0 ? (
-                     <p className="text-center text-sm text-muted-foreground py-4">
-                       No users found.
-                     </p>
+                    <p className="text-center text-sm text-gray-600 py-4">
+                      No users found.
+                    </p>
                   ) : (
                     usersToInvite.map(user => {
                       const isInvited = invitedUserIds.has(user.id);
                       const isLoading = invitingUserId === user.id;
 
                       return (
-                        <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted">
-                          <Avatar className="h-8 w-8">
+                        <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100">
+                          <Avatar className="h-8 w-8 border-2 border-black">
                             <AvatarImage src={user.photoURL} />
                             <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{user.displayName}</p>
-                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            <p className="font-medium text-sm truncate text-black">{user.displayName}</p>
+                            <p className="text-xs text-gray-600 truncate">{user.email}</p>
                           </div>
                           
                           <Button
@@ -142,7 +134,11 @@ export function MembersTab({ members, leadUID, projectId, name = "Project" }: Pr
                             variant={isInvited ? "outline" : "default"}
                             onClick={() => handleInvite(user)}
                             disabled={isLoading || isInvited}
-                            className="w-24"
+                            className={`w-24 rounded-lg ${
+                              isInvited
+                                ? 'border-2 border-black text-black' 
+                                : 'bg-black text-white border-2 border-black hover:bg-gray-800'
+                            }`}
                           >
                             {isLoading ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -167,23 +163,25 @@ export function MembersTab({ members, leadUID, projectId, name = "Project" }: Pr
         </div>
       )}
 
-      {/* --- Member List (Unchanged) --- */}
+      {/* --- Member List --- */}
       <div className="grid md:grid-cols-3 gap-4">
         {members.map(user => (
-          <Card key={user.id}>
+          <Card key={user.id} className="bg-white border-2 border-black rounded-lg">
             <CardContent className="p-4 flex items-center gap-4">
-              <Avatar>
+              <Avatar className="border-2 border-black">
                 <AvatarImage src={user.photoURL} />
                 <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-semibold flex items-center gap-2">
+                <p className="font-semibold flex items-center gap-2 text-black">
                   {user.displayName}
                   {user.id === leadUID && (
-                    <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">Lead</span>
+                    <span className="text-[10px] uppercase font-bold text-black bg-gray-200 border border-black px-1.5 py-0.5 rounded">
+                      Lead
+                    </span>
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <p className="text-xs text-gray-600">{user.email}</p>
               </div>
             </CardContent>
           </Card>

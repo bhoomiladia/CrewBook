@@ -79,7 +79,6 @@ export function TaskBoard({ tasks, projectId, members, milestones, leadUID }: Ta
   const { currentUser } = useAuth();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
-  // 1. Define Role: Is the user the Project Lead?
   const isLead = currentUser?.uid === leadUID;
 
   const taskMap = useMemo(() => ({
@@ -91,7 +90,7 @@ export function TaskBoard({ tasks, projectId, members, milestones, leadUID }: Ta
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Prevents accidental drags on click
+        distance: 8,
       },
     })
   );
@@ -112,8 +111,6 @@ export function TaskBoard({ tasks, projectId, members, milestones, leadUID }: Ta
     const task = tasks.find(t => t.id === active.id);
     if (!task) return;
     
-    // --- SECURITY CHECK ---
-    // Ensure the user is allowed to move this specific task
     const isAssigned = task.assignedTo === currentUser?.uid;
     
     if (!isLead && !isAssigned) {
@@ -175,7 +172,6 @@ export function TaskBoard({ tasks, projectId, members, milestones, leadUID }: Ta
             task={activeTask}
             members={members}
             isGhost={true}
-            // Ghost card always looks "dragged"
             canDrag={true} 
             isLead={isLead}
           />
@@ -205,17 +201,18 @@ const TaskColumn = ({
   return (
     <Card
       ref={setNodeRef}
-      className={`bg-muted/50 h-full ${isOver ? 'ring-2 ring-primary' : ''}`}
+      // Styled Column
+      className={`bg-white border-2 border-black rounded-lg h-full ${isOver ? 'ring-2 ring-blue-500' : ''}`}
     >
       <CardHeader className="flex flex-row items-center justify-between py-4">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="text-lg font-semibold flex items-center gap-2 text-black">
           {title}
-          <span className="text-xs font-normal text-muted-foreground bg-background px-2 py-0.5 rounded-full border">
+          {/* Styled Count Badge */}
+          <span className="text-xs font-normal text-black bg-gray-100 px-2 py-0.5 rounded-full border-2 border-black">
             {tasks.length}
           </span>
         </CardTitle>
         
-        {/* Only Lead can Create Tasks */}
         {isLead && (
             <CreateTaskDialog
               projectId={projectId}
@@ -223,8 +220,9 @@ const TaskColumn = ({
               members={members}
               milestones={milestones}
             >
-            <Button size="icon" variant="ghost" className="h-7 w-7">
-                <Plus className="h-5 w-5" />
+            {/* Styled Add Button */}
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-black hover:bg-gray-100 rounded-lg">
+              <Plus className="h-5 w-5" />
             </Button>
             </CreateTaskDialog>
         )}
@@ -244,7 +242,8 @@ const TaskColumn = ({
               />
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center h-24 text-muted-foreground text-sm border-2 border-dashed rounded-lg">
+            // Styled Empty State
+            <div className="flex flex-col items-center justify-center h-24 text-gray-500 text-sm border-2 border-dashed border-black rounded-lg">
               No tasks
             </div>
           )}
@@ -266,9 +265,6 @@ const DraggableTaskCard = ({
   currentUserId?: string;
 }) => {
   
-  // --- PERMISSION LOGIC ---
-  // 1. Is the user the Lead?
-  // 2. Is the user assigned to this specific task?
   const isAssignedToMe = task.assignedTo === currentUserId;
   const canDrag = isLead || isAssignedToMe;
 
@@ -281,7 +277,7 @@ const DraggableTaskCard = ({
     isDragging,
   } = useSortable({ 
       id: task.id,
-      disabled: !canDrag // <--- KEY: Disables drag for unauthorized users
+      disabled: !canDrag 
   });
 
   const style = {
@@ -300,7 +296,7 @@ const DraggableTaskCard = ({
         onDelete={onDelete}
         dragHandleListeners={listeners}
         isLead={isLead}
-        canDrag={canDrag} // Pass down to show/hide Lock icon
+        canDrag={canDrag}
       />
     </div>
   );
@@ -329,24 +325,22 @@ const TaskCard = ({
   const assignee = members.find(m => m.id === task.assignedTo);
 
   return (
-    <Card className={`bg-card shadow-sm hover:shadow-md transition-all group relative border-l-4 ${
-        // Visual helper: Colored border based on priority or status (Optional, here using status)
-        task.status === 'done' ? 'border-l-green-500' : 
-        task.status === 'inProgress' ? 'border-l-blue-500' : 'border-l-gray-300'
-    }`}>
+    // Styled Task Card
+    <Card className={`bg-white shadow-sm border-2 border-black rounded-lg hover:shadow-md transition-all group relative`}>
       
-      {/* --- EDIT & DELETE (LEAD ONLY) --- */}
       {!isGhost && onDelete && projectId && isLead && (
-        <div className="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 rounded-md shadow-sm">
+        <div className="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 rounded-md">
+          {/* Styled Edit Button */}
           <EditTaskDialog projectId={projectId} task={task} members={members}>
-            <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-blue-600">
+            <Button size="icon" variant="ghost" className="h-6 w-6 text-black hover:bg-gray-100 rounded-lg hover:text-blue-600">
               <Edit className="h-3 w-3" />
             </Button>
           </EditTaskDialog>
+          {/* Styled Delete Button */}
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6 text-red-500 hover:text-red-600"
+            className="h-6 w-6 text-red-500 hover:bg-gray-100 rounded-lg hover:text-red-600"
             onClick={() => onDelete(task.id)}
           >
             <Trash className="h-3 w-3" />
@@ -356,47 +350,47 @@ const TaskCard = ({
       
       <CardContent className="p-3">
         <div className="flex justify-between items-start mb-2">
-            <p className="font-medium text-sm leading-tight pr-6">{task.title}</p>
+            <p className="font-medium text-sm leading-tight pr-6 text-black">{task.title}</p>
         </div>
         
         <div className="flex justify-between items-center mt-3">
-          {/* Deadline Badge */}
           <div className={`text-xs px-1.5 py-0.5 rounded ${
               task.deadline && task.deadline.toDate() < new Date() && task.status !== 'done' 
               ? 'bg-red-100 text-red-600' 
-              : 'bg-gray-100 text-muted-foreground'
+              : 'bg-gray-100 text-gray-700'
           }`}>
              {task.deadline ? formatDeadline(task.deadline) : 'No Date'}
           </div>
           
           <div className="flex items-center gap-2">
             {assignee ? (
-              <Avatar className="h-6 w-6 border ring-1 ring-white" title={assignee.displayName || assignee.email}>
+              // Styled Avatar
+              <Avatar className="h-6 w-6 border-2 border-black" title={assignee.displayName || assignee.email}>
                 <AvatarImage src={assignee.photoURL} />
-                <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                <AvatarFallback className="text-[9px]">
                   {(assignee.displayName || assignee.email || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             ) : (
-              <div className="h-6 w-6 rounded-full bg-gray-100 border flex items-center justify-center" title="Unassigned">
-                 <span className="text-[9px] text-gray-400">?</span>
+              // Styled Unassigned Avatar
+              <div className="h-6 w-6 rounded-full bg-gray-100 border-2 border-black flex items-center justify-center" title="Unassigned">
+                  <span className="text-[9px] text-gray-500">?</span>
               </div>
             )}
             
-            {/* --- DRAG HANDLE / LOCK --- */}
             {!isGhost && (
               <div
                 {...dragHandleListeners}
                 className={`p-1 rounded transition-colors ${
                     canDrag 
-                    ? 'hover:bg-gray-100 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700' 
-                    : 'cursor-not-allowed text-gray-200'
+                    ? 'hover:bg-gray-100 cursor-grab active:cursor-grabbing text-gray-500 hover:text-black' 
+                    : 'cursor-not-allowed text-gray-300'
                 }`}
               >
                 {canDrag ? (
-                   <GripVertical className="h-4 w-4" />
+                    <GripVertical className="h-4 w-4" />
                 ) : (
-                   <Lock className="h-3 w-3" />
+                    <Lock className="h-3 w-3" />
                 )}
               </div>
             )}
@@ -427,7 +421,7 @@ function EditTaskDialog({ projectId, task, members, children }: EditTaskProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title) return; // Assignee can remain empty/undefined if needed
+    if (!title) return;
 
     setLoading(true);
     try {
@@ -439,7 +433,6 @@ function EditTaskDialog({ projectId, task, members, children }: EditTaskProps) {
         deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : null,
       });
 
-      // Notify if assignee changed
       if (assigneeUid && assigneeUid !== task.assignedTo && assigneeUid !== currentUser?.uid) {
          await addDoc(collection(db, 'notifications'), {
           recipientId: assigneeUid,
@@ -464,20 +457,28 @@ function EditTaskDialog({ projectId, task, members, children }: EditTaskProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      {/* Styled Dialog */}
+      <DialogContent className="sm:max-w-[425px] bg-white border-2 border-black rounded-lg">
         <DialogHeader>
-          <DialogTitle>Edit Task</DialogTitle>
+          <DialogTitle className="text-black">Edit Task</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Task Title</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label htmlFor="title" className="text-black font-semibold">Task Title</Label>
+              <Input 
+                id="title" 
+                value={title} 
+                onChange={(e) => setTitle(e.target.value)}
+                className="bg-white border-2 border-black rounded-lg"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assignee">Assign To</Label>
+              <Label htmlFor="assignee" className="text-black font-semibold">Assign To</Label>
               <Select onValueChange={setAssigneeUid} value={assigneeUid || ''}>
-                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="bg-white border-2 border-black rounded-lg">
+                  <SelectValue placeholder="Select member" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-2 border-black rounded-lg">
                   {members.map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.displayName}</SelectItem>
                   ))}
@@ -485,11 +486,22 @@ function EditTaskDialog({ projectId, task, members, children }: EditTaskProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="deadline">Deadline</Label>
-              <Input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              <Label htmlFor="deadline" className="text-black font-semibold">Deadline</Label>
+              <Input 
+                id="deadline" 
+                type="date" 
+                value={deadline} 
+                onChange={(e) => setDeadline(e.target.value)}
+                className="bg-white border-2 border-black rounded-lg"
+              />
             </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+             {/* Styled Save Button */}
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800"
+            >
               {loading ? <Loader2 className="animate-spin" /> : 'Save Changes'}
             </Button>
           </DialogFooter>

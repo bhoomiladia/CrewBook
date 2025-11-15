@@ -4,9 +4,8 @@ import React, { useState } from 'react';
 import { db } from '@/firebaseConfig';
 import { UserProfileWithId } from '@/hooks/data/useProjectData';
 import { Milestone } from '@/lib/types';
-// --- 1. Added imports ---
 import { addDoc, collection, Timestamp, serverTimestamp } from 'firebase/firestore'; 
-import { useAuth } from '@/hooks/useAuth'; // <-- To get current user
+import { useAuth } from '@/hooks/useAuth';
 
 // --- UI Imports ---
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,7 @@ import { Loader2 } from 'lucide-react';
 
 interface Props {
   projectId: string;
-  name?: string; // <-- 2. Added prop for notification context
+  name?: string; 
   defaultStatus: 'todo' | 'inProgress' | 'done';
   members: UserProfileWithId[];
   milestones: Milestone[];
@@ -41,13 +40,13 @@ interface Props {
 
 export function CreateTaskDialog({
   projectId,
-  name = "this project", // <-- Default value
+  name = "this project",
   defaultStatus,
   members,
   milestones,
   children,
 }: Props) {
-  const { currentUser } = useAuth(); // <-- 3. Get the current user
+  const { currentUser } = useAuth(); 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [assigneeUid, setAssigneeUid] = useState<string | undefined>();
@@ -57,27 +56,22 @@ export function CreateTaskDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add check for currentUser
     if (!title || !assigneeUid || !currentUser) return; 
 
     setLoading(true);
     try {
-      // --- 4. Create the Task Document ---
       await addDoc(collection(db, 'projects', projectId, 'tasks'), {
         title: title,
         status: defaultStatus,
         assignedTo: assigneeUid,
         deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : null,
-        // Fix: Handle the "none" value from the select
         milestoneId: milestoneId === 'none' ? null : milestoneId || null, 
-        name: name, // Use the prop
-        projectId: projectId,     // Add projectId for security rules
-        createdAt: serverTimestamp(), // Add creation timestamp
-        createdBy: currentUser.uid  // Add creator
+        name: name,
+        projectId: projectId,
+        createdAt: serverTimestamp(),
+        createdBy: currentUser.uid
       });
 
-      // --- 5. (NEW) Send Notification Logic ---
-      // Only send a notification if you're assigning it to someone ELSE
       if (assigneeUid !== currentUser.uid) {
         await addDoc(collection(db, 'notifications'), {
           recipientId: assigneeUid,
@@ -91,9 +85,7 @@ export function CreateTaskDialog({
           createdAt: serverTimestamp()
         });
       }
-      // --- End of Notification Logic ---
 
-      // Reset form
       setTitle('');
       setAssigneeUid(undefined);
       setDeadline('');
@@ -109,27 +101,29 @@ export function CreateTaskDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      {/* Styled Dialog */}
+      <DialogContent className="sm:max-w-[425px] bg-white border-2 border-black rounded-lg">
         <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
+          <DialogTitle className="text-black">Add New Task</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4"> {/* Use grid on form */}
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Task Title</Label>
+              <Label htmlFor="title" className="text-black font-semibold">Task Title</Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Design the homepage"
+                className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assignee">Assign To</Label>
+              <Label htmlFor="assignee" className="text-black font-semibold">Assign To</Label>
               <Select onValueChange={setAssigneeUid} value={assigneeUid}>
-                <SelectTrigger id="assignee">
+                <SelectTrigger id="assignee" className="bg-white border-2 border-black rounded-lg">
                   <SelectValue placeholder="Select a team member" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-2 border-black rounded-lg">
                   {members.map(member => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.displayName}
@@ -140,12 +134,12 @@ export function CreateTaskDialog({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="milestone">Milestone (Optional)</Label>
+              <Label htmlFor="milestone" className="text-black font-semibold">Milestone (Optional)</Label>
               <Select onValueChange={setMilestoneId} value={milestoneId}>
-                <SelectTrigger id="milestone">
+                <SelectTrigger id="milestone" className="bg-white border-2 border-black rounded-lg">
                   <SelectValue placeholder="Assign to a milestone" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-2 border-black rounded-lg">
                   <SelectItem value="none">No Milestone</SelectItem>
                   {milestones.map(milestone => (
                     <SelectItem key={milestone.id} value={milestone.id}>
@@ -157,19 +151,26 @@ export function CreateTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="deadline">Deadline</Label>
+              <Label htmlFor="deadline" className="text-black font-semibold">Deadline</Label>
               <Input
                 id="deadline"
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
+                className="bg-white border-2 border-black rounded-lg"
               />
             </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="ghost">Cancel</Button>
+              <Button type="button" variant="ghost" className="text-black hover:bg-gray-100 rounded-lg">
+                Cancel
+              </Button>
             </DialogClose>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800"
+            >
               {loading ? <Loader2 className="animate-spin" /> : 'Create Task'}
             </Button>
           </DialogFooter>
