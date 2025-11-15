@@ -31,14 +31,12 @@ const ProjectCard = ({ project }: { project: Project }) => {
   const percent = Number(budget) > 0 ? Math.min((expenses / Number(budget)) * 100, 100) : 0;
 
   return (
-    // --- THEME: White bg, black border, and hover shadow ---
     <Card className="flex flex-col h-full bg-white border-2 border-black transition-all hover:shadow-[4px_4px_0px_#000]">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <h3 className="text-lg font-semibold truncate w-3/4 text-black">
             {project.name}
           </h3>
-          {/* --- THEME: Green badge --- */}
           <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
             In Progress
           </Badge>
@@ -53,12 +51,10 @@ const ProjectCard = ({ project }: { project: Project }) => {
              <span>Budget Used</span>
              <span>{Math.round(percent)}%</span>
            </div>
-           {/* --- THEME: Green progress bar --- */}
            <Progress value={percent} className="h-2 [&>div]:bg-green-500" />
         </div>
       </CardContent>
       <CardFooter className="pt-4">
-        {/* --- THEME: Bordered button --- */}
         <Button variant="outline" size="sm" asChild className="w-full bg-white border-2 border-black text-black hover:bg-gray-100">
           <Link href={`dashboard/projects/${project.id}`}>Open Project</Link>
         </Button>
@@ -75,7 +71,6 @@ const TaskItem = ({ task }: { task: Task }) => {
 
   return (
     <Link href={targetLink} className="block group">
-      {/* --- THEME: White bg, black border --- */}
       <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-black bg-white hover:bg-green-50 transition-all">
         {task.status === 'done' ? 
             <CheckCircle2 size={20} className="text-green-500 shrink-0" /> : 
@@ -89,7 +84,6 @@ const TaskItem = ({ task }: { task: Task }) => {
           
           <div className="flex items-center gap-2 text-xs text-gray-600 mt-0.5">
              {task.name && (
-               // --- THEME: Green badge ---
                <span className="bg-green-100 text-green-800 font-medium truncate max-w-[100px] px-1.5 py-0.5 rounded">
                  {task.name}
                </span>
@@ -98,7 +92,6 @@ const TaskItem = ({ task }: { task: Task }) => {
           </div>
         </div>
 
-        {/* --- THEME: Black badge for 'inProgress' --- */}
         <Badge 
           variant={task.status === 'inProgress' ? 'default' : 'secondary'} 
           className={`shrink-0 ${
@@ -136,7 +129,6 @@ export default function DashboardPage() {
   }
 
   return (
-    // --- THEME: Changed text to black/gray ---
     <div className="p-0 md:p-4 space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -144,7 +136,6 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold tracking-tight text-black">Welcome back, {userName} 👋</h1>
             <p className="text-gray-600">Here is what's happening with your projects today.</p>
         </div>
-        {/* --- THEME: Black button --- */}
         <Button onClick={() => router.push('dashboard/projects/create')} className="bg-black text-white hover:bg-gray-800">
           <Plus size={18} className="mr-2" /> Create Project
         </Button>
@@ -155,14 +146,14 @@ export default function DashboardPage() {
         <StatCard 
             icon={<Briefcase size={24} />} 
             label="Active Projects" 
-            value={projects.length}
+            value={projects.length} 
             color="green" 
         />
         <StatCard 
             icon={<ListTodo size={24} />} 
             label="Pending Tasks" 
             value={openTasks.length}
-            color="blue" // --- THEME: Set second card to blue ---
+            color="blue" 
         />
         <StatCard 
             icon={<CheckCircle2 size={24} />} 
@@ -198,7 +189,6 @@ export default function DashboardPage() {
               View All
             </Button>
           </div>
-          {/* --- THEME: Bordered card --- */}
           <Card className="h-full min-h-[300px] flex flex-col bg-white border-2 border-black">
             <CardContent className="space-y-3 pt-6 flex-grow">
               {openTasks.length > 0 ? (
@@ -230,7 +220,6 @@ export default function DashboardPage() {
 }
 
 // --- Helper Components ---
-// --- THEME: Updated StatCard to be bordered and accept a color ---
 const StatCard = ({ icon, label, value, color = 'green' }: any) => (
     <Card className="bg-white border-2 border-black">
         <CardContent className="flex items-center gap-4 pt-6">
@@ -247,7 +236,7 @@ const StatCard = ({ icon, label, value, color = 'green' }: any) => (
     </Card>
 )
 
-// --- THEME: Updated EmptyState to be bordered ---
+// --- FIX: Updated EmptyState to match the theme ---
 const EmptyState = ({ message, action }: any) => (
     <Card className="flex flex-col items-center justify-center p-10 border-2 border-black border-dashed bg-white">
         <p className="text-gray-600 mb-4 text-center">{message}</p>

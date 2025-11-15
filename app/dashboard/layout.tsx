@@ -1,15 +1,16 @@
 'use client'
 
-import React, { useEffect } from 'react'
+// 1. Import useState
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Bell, Search, User, LogOut, Loader2, Menu } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Bell, User, LogOut, Loader2, Menu } from 'lucide-react'
+// import { Input } from '@/components/ui/input' // No longer needed
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { auth } from '@/firebaseConfig'
 import { signOut } from 'firebase/auth'
-import { ThemeToggle } from '@/components/ThemeToggle'
+// import { ThemeToggle } from '@/components/ThemeToggle' // Removed
 import { Chatbot } from './components/Chatbot'
 
 import {
@@ -27,11 +28,24 @@ const sidebarLinks = [
   { name: 'Explore Projects', href: '/dashboard/explore' },
 ]
 
+// 2. Define our color options
+const colorOptions = [
+  { name: 'Green', class: 'bg-green-50', hex: '#f0fdf4' },
+  { name: 'Pink', class: 'bg-pink-50', hex: '#fdf2f8' },
+  { name: 'Blue', class: 'bg-blue-50', hex: '#eff6ff' },
+  { name: 'Lilac', class: 'bg-violet-50', hex: '#f5f3ff' },
+  { name: 'Yellow', class: 'bg-yellow-50', hex: '#fefce8' },
+  { name: 'White', class: 'bg-white', hex: '#ffffff' },
+]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { currentUser, userProfile, loading } = useAuth()
+  
+  // 3. Add state for the background color
+  const [bgColor, setBgColor] = useState('bg-green-50')
+
 
   useEffect(() => {
     if (!loading) {
@@ -59,10 +73,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-
+  // 4. Apply the state to the root div
   return (
-    // --- 1. THEME: Set base bg to light-green, text to black ---
-    <div className="h-screen w-screen flex overflow-hidden bg-green-50 text-black">
+    <div className={`h-screen w-screen flex overflow-hidden  text-black ${bgColor}`}>
 
       {/* --- MOBILE SIDEBAR --- */}
       <Sheet>
@@ -73,8 +86,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </SheetTrigger>
 
         <SheetContent side="left" className="p-0 w-64 bg-white border-r-2 border-black">
-          <aside className="flex flex-col h-full">
-            <div className="p-5 text-xl font-semibold border-b-2 border-black uppercase tracking-wider">
+          <aside className="flex flex-col h-fit">
+            <div className="p-4 text-xl font-semibold border-b-2 border-black uppercase tracking-wider">
               CollabHub
             </div>
 
@@ -82,7 +95,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {sidebarLinks.map((link) => (
                 <Link key={link.href} href={link.href}>
                   <Button
-                    // --- THEME: Active button is black ---
                     variant={pathname === link.href ? "default" : "ghost"}
                     className={`w-full justify-start text-sm rounded-lg ${
                       pathname === link.href
@@ -95,15 +107,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </Link>
               ))}
 
-              <div className="pt-4 border-t border-gray-200">
-                <ThemeToggle />
+              {/* 5. Add Color Swatches (Mobile) */}
+              <div className="pt-4 border-t border-gray-200 px-0">
+                <span className="text-xs font-semibold uppercase text-gray-500 px-4">Theme</span>
+                <div className="flex flex-wrap gap-2 pt-3 px-4">
+                  {colorOptions.map(color => (
+                    <button
+                      key={color.name}
+                      title={color.name}
+                      onClick={() => setBgColor(color.class)}
+                      className={`h-6 w-6 rounded-full border-2 ${bgColor === color.class ? 'border-black' : 'border-gray-300'}`}
+                      style={{ backgroundColor: color.hex }}
+                    />
+                  ))}
+                </div>
               </div>
             </nav>
 
             <div className="p-4 border-t-2 border-black">
               <Button
                 onClick={handleLogout}
-                // --- THEME: Bordered button ---
                 variant="outline"
                 className="w-full bg-white border-2 border-black text-black hover:bg-gray-100"
               >
@@ -125,7 +148,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link key={link.href} href={link.href}>
               <Button
                 variant={pathname === link.href ? "default" : "ghost"}
-                // --- THEME: Active button is black, inactive has green hover ---
                 className={`w-full justify-start text-sm rounded-lg ${
                   pathname === link.href
                     ? 'bg-black text-white font-medium'
@@ -137,15 +159,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
 
-          <div className="pt-4 border-t border-gray-200">
-            <ThemeToggle />
+          {/* 6. Add Color Swatches (Desktop) */}
+          <div className="pt-4 border-t border-gray-200 px-0">
+            <span className="text-xs font-semibold uppercase text-gray-500 px-4">Theme</span>
+            <div className="flex flex-wrap gap-2 pt-3 px-4">
+              {colorOptions.map(color => (
+                <button
+                  key={color.name}
+                  title={color.name}
+                  onClick={() => setBgColor(color.class)}
+                  className={`h-6 w-6 rounded-full border-2 ${bgColor === color.class ? 'border-black' : 'border-gray-300'}`}
+                  style={{ backgroundColor: color.hex }}
+                />
+              ))}
+            </div>
           </div>
         </nav>
 
         <div className="p-4 border-t-2 border-black">
           <Button
             onClick={handleLogout}
-            // --- THEME: Bordered button ---
             variant="outline"
             className="w-full flex items-center justify-center gap-2 text-sm bg-white border-2 border-black text-black hover:bg-gray-100"
           >
@@ -154,35 +187,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT AREA (Middle Column) --- */}
-      <div className="flex-1 flex flex-col 
-                      md:ml-64 
-                      md:mr-80 
-                      h-full overflow-hidden">
+      {/* --- MAIN CONTENT AREA --- */}
+      <div className="flex-1 flex flex-col md:ml-64 md:mr-80 h-full overflow-hidden">
 
-        {/* --- HEADER --- */}
-        <header className="h-16 border-b-2 border-black flex items-center justify-between px-4 md:px-6 bg-white shrink-0 sticky top-0 z-10">
+        <header className="h-18 border-b-2 border-black flex items-center justify-between px-4 md:px-6 bg-white shrink-0 sticky top-0 z-10">
 
-          <div className="flex items-center gap-3 w-auto md:w-1/3">
-            <Search size={18} className="text-gray-600" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              // --- THEME: Bordered search bar ---
-              className="hidden md:block bg-white border-2 border-black focus-visible:ring-1 focus-visible:ring-black placeholder:text-gray-500"
-            />
+          {/* 7. Removed Search, added CollabHub title */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl h-fit font-semibold uppercase tracking-wider text-black md:hidden">
+              CollabHub
+            </h1>
           </div>
 
           <div className="flex items-center gap-2">
             <Link href="/dashboard/notifications">
-              {/* --- THEME: Bordered icon button --- */}
               <Button variant="outline" size="icon" className="bg-white border-2 border-black">
                 <Bell size={20} />
               </Button>
             </Link>
 
             <Link href={`/dashboard/profile/${currentUser.uid}`}>
-              {/* --- THEME: Bordered icon button --- */}
               <Button variant="outline" size="icon" className="bg-white border-2 border-black">
                 <User size={20} />
               </Button>
@@ -191,8 +215,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
 
-        {/* --- MAIN PAGE BODY --- */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-green-50">
+        {/* 8. Apply background state to main content area */}
+        <main className={`flex-1 overflow-y-auto p-4 md:p-8 ${bgColor} bg-notebook-grid`}>
           {children}
         </main>
 
@@ -207,7 +231,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sheet>
         <SheetTrigger asChild>
           <Button
-            // --- THEME: Black button to match sidebar ---
             className="md:hidden fixed bottom-5 right-5 z-50 rounded-full h-14 w-14 shadow-lg bg-black text-white hover:bg-gray-800 text-2xl"
           >
             💬
