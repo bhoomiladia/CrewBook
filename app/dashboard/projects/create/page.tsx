@@ -11,7 +11,8 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
 // --- Firebase & Real Data Imports ---
-import { db } from '@/firebaseConfig'
+// Using the config path you provided
+import { db } from '@/firebaseConfig' 
 import { useAuth } from '@/hooks/useAuth'
 import {
   writeBatch,
@@ -75,6 +76,8 @@ export default function CreateProjectPage() {
         endDate: toTimestamp(endDate),
         isPublic: isPublic, 
         createdAt: serverTimestamp(),
+        // Adding a default status
+        status: 'inProgress', 
       }
       
       batch.set(projectRef, newProjectData)
@@ -92,51 +95,91 @@ export default function CreateProjectPage() {
 
   // --- JSX ---
   return (
-    <div className="flex flex-col space-y-6 px-6 py-8 max-w-3xl mx-auto">
-      {/* Project Info */}
-      <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-6">Create New Project</h2>
+    // Set the overall page background
+    <div className="flex flex-col space-y-6 px-6 py-8 max-w-3xl mx-auto bg-white min-h-screen">
+      
+      {/* Project Info Card with Notebook Styling */}
+      <Card className="p-6 bg-white border-2 border-black rounded-lg">
+        <h2 className="text-2xl font-bold mb-6 text-black">Create New Project</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="title">Project Title</Label>
-            <Input id="title" placeholder="e.g., Acme Corp Redesign" value={title} onChange={e => setTitle(e.target.value)} />
+            <Label htmlFor="title" className="text-black font-semibold">Project Title</Label>
+            <Input 
+              id="title" 
+              placeholder="e.g., Acme Corp Redesign" 
+              value={title} 
+              onChange={e => setTitle(e.target.value)} 
+              className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500 focus-visible:ring-blue-500"
+            />
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" placeholder="Briefly describe your project..." value={description} onChange={e => setDescription(e.target.value)} />
+            <Label htmlFor="description" className="text-black font-semibold">Description</Label>
+            <Textarea 
+              id="description" 
+              placeholder="Briefly describe your project..." 
+              value={description} 
+              onChange={e => setDescription(e.target.value)}
+              className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500 focus-visible:ring-blue-500" 
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budget">Budget</Label>
-            <Input id="budget" placeholder="e.g., $5,000" value={budget} onChange={e => setBudget(e.target.value)} />
+            <Label htmlFor="budget" className="text-black font-semibold">Budget</Label>
+            <Input 
+              id="budget" 
+              placeholder="e.g., $5,000" 
+              value={budget} 
+              onChange={e => setBudget(e.target.value)} 
+              className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500 focus-visible:ring-blue-500"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tech-stack">Tech Stack (comma separated)</Label>
-            <Input id="tech-stack" placeholder="e.g., React, Firebase" value={techStack} onChange={e => setTechStack(e.target.value)} />
+            <Label htmlFor="tech-stack" className="text-black font-semibold">Tech Stack (comma separated)</Label>
+            <Input 
+              id="tech-stack" 
+              placeholder="e.g., React, Firebase" 
+              value={techStack} 
+              onChange={e => setTechStack(e.target.value)}
+              className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500 focus-visible:ring-blue-500"
+            />
           </div>
                     
           <div className="space-y-2">
-            <Label htmlFor="start-date">Start Date</Label>
-            <Input id="start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            <Label htmlFor="start-date" className="text-black font-semibold">Start Date</Label>
+            <Input 
+              id="start-date" 
+              type="date" 
+              value={startDate} 
+              onChange={e => setStartDate(e.target.value)}
+              className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500 focus-visible:ring-blue-500" 
+            />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="end-date">End Date (Optional)</Label>
-            <Input id="end-date" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            <Label htmlFor="end-date" className="text-black font-semibold">End Date (Optional)</Label>
+            <Input 
+              id="end-date" 
+              type="date" 
+              value={endDate} 
+              onChange={e => setEndDate(e.target.value)}
+              className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500 focus-visible:ring-blue-500" 
+            />
           </div>
           
-          <div className="flex items-center space-x-2 md:col-span-2 py-4">
+          <div className="flex items-center space-x-3 md:col-span-2 py-4">
             <Switch
               id="is-public"
               checked={isPublic}
               onCheckedChange={setIsPublic}
+              // Styled switch to match the theme
+              className="data-[state=checked]:bg-black data-[state=unchecked]:bg-gray-300 border-2 border-black"
             />
             <Label htmlFor="is-public" className="cursor-pointer space-y-1">
-              <span className="font-medium">Make Project Public</span>
-              <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-black">Make Project Public</span>
+              <p className="text-xs text-gray-600">
                 Public projects will be visible on the "Explore" page.
               </p>
             </Label>
@@ -144,9 +187,14 @@ export default function CreateProjectPage() {
         </div>
       </Card>
 
-      {/* Create Button */}
+      {/* Create Button with Notebook Styling */}
       {error && <p className="text-red-500 my-4 text-center">{error}</p>}
-      <Button onClick={createProject} className="w-full md:w-48 self-end" size="lg" disabled={loading}>
+      <Button 
+        onClick={createProject} 
+        className="w-full md:w-48 self-end bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800 focus-visible:ring-blue-500 disabled:bg-gray-400" 
+        size="lg" 
+        disabled={loading}
+      >
         {loading ? <Loader2 className="animate-spin" /> : 'Create Project'}
       </Button>
     </div>

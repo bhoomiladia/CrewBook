@@ -15,13 +15,13 @@ import { Progress } from '@/components/ui/progress';
 interface Props {
   milestones: Milestone[];
   tasks: Task[];
-  members: UserProfileWithId[]; // <-- Key prop to get member names
+  members: UserProfileWithId[]; 
   projectId: string;
 }
 
 export function MilestonesTab({ milestones, tasks = [], members, projectId }: Props) {
   const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState(''); // Use string for date input
+  const [newDate, setNewDate] = useState(''); 
   const [loading, setLoading] = useState(false);
 
   const handleAddMilestone = async () => {
@@ -29,12 +29,10 @@ export function MilestonesTab({ milestones, tasks = [], members, projectId }: Pr
 
     setLoading(true);
     try {
-      // Create a new milestone in the sub-collection
       await addDoc(collection(db, 'projects', projectId, 'milestones'), {
         title: newTitle,
         date: Timestamp.fromDate(new Date(newDate)),
       });
-      // Reset the form
       setNewTitle('');
       setNewDate('');
     } catch (error) {
@@ -44,29 +42,33 @@ export function MilestonesTab({ milestones, tasks = [], members, projectId }: Pr
     }
   };
 
-  // Sort milestones by date
   const sortedMilestones = [...milestones].sort((a, b) => a.date.seconds - b.date.seconds);
 
   return (
     <div className="space-y-6">
       {/* 1. Create New Milestone Card */}
-      <Card>
+      <Card className="bg-white border-2 border-black rounded-lg">
         <CardHeader>
-          <CardTitle>Create New Milestone</CardTitle>
+          <CardTitle className="text-black">Create New Milestone</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-2">
           <Input
             placeholder="Milestone title (e.g., 'V1.0 Launch')"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
+            className="bg-white border-2 border-black rounded-lg placeholder:text-gray-500"
           />
           <Input
             type="date"
             value={newDate}
             onChange={(e) => setNewDate(e.target.value)}
-            className="w-full md:w-[200px]"
+            className="w-full md:w-[200px] bg-white border-2 border-black rounded-lg"
           />
-          <Button onClick={handleAddMilestone} disabled={loading} className="w-full md:w-auto">
+          <Button 
+            onClick={handleAddMilestone} 
+            disabled={loading} 
+            className="w-full md:w-auto bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800"
+          >
             {loading ? <Loader2 className="animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
             Add Milestone
           </Button>
@@ -80,13 +82,12 @@ export function MilestonesTab({ milestones, tasks = [], members, projectId }: Pr
             <MilestoneCard
               key={milestone.id}
               milestone={milestone}
-              // Pass down only the tasks for this milestone
               tasks={tasks.filter(t => t.milestoneId === milestone.id)}
               members={members}
             />
           ))
         ) : (
-          <p className="text-muted-foreground text-center py-10">
+          <p className="text-gray-600 text-center py-10">
             No milestones created yet.
           </p>
         )}
@@ -109,45 +110,48 @@ function MilestoneCard({
   const progress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
   return (
-    <Card>
+    <Card className="bg-white border-2 border-black rounded-lg">
       <CardHeader className="flex flex-row justify-between items-center">
         <div className="flex items-center gap-3">
-          <Target className="w-6 h-6 text-primary" />
+          <Target className="w-6 h-6 text-black" />
           <div>
-            <CardTitle>{milestone.title}</CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <CardTitle className="text-black">{milestone.title}</CardTitle>
+            <p className="text-sm text-gray-600">
               Due: {milestone.date.toDate().toLocaleDateString()}
             </p>
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-gray-700 font-medium">
           {completedTasks} / {tasks.length} Tasks
         </div>
       </CardHeader>
       <CardContent>
-        <Progress value={progress} className="h-2 mb-4" />
-        <h4 className="font-semibold mb-2 text-sm">Tasks in this milestone:</h4>
+        {/* Styled Progress Bar */}
+        <Progress 
+          value={progress} 
+          className="h-2 mb-4 bg-gray-200 border border-black [&>*]:bg-green-500" 
+        />
+        <h4 className="font-semibold mb-2 text-sm text-black">Tasks in this milestone:</h4>
         <div className="space-y-2">
           {tasks.length > 0 ? (
             tasks.map(task => {
-              // --- This finds the assignee name (Fixes Request 2) ---
               const assignee = members.find(m => m.id === task.assignedTo);
               return (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                  className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border-2 border-gray-200"
                 >
-                  <p className={`text-sm ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                  <p className={`text-sm text-black ${task.status === 'done' ? 'line-through text-gray-500' : ''}`}>
                     {task.title}
                   </p>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-gray-600">
                     {assignee ? assignee.displayName.split(' ')[0] : 'Unassigned'}
                   </span>
                 </div>
               );
             })
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-600">
               No tasks assigned to this milestone.
             </p>
           )}

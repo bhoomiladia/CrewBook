@@ -18,7 +18,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend, // <-- Import Legend
+  Legend,
 } from 'recharts'
 import {
   Activity,
@@ -28,14 +28,16 @@ import {
   CalendarCheck,
 } from 'lucide-react'
 
-// --- Import Real Hooks & Types ---
 import { useAuth } from '@/hooks/useAuth'
 import { useAllProjectTasks } from '@/hooks/data/useAllProjectTasks'
-import { useUserDirectory } from '@/hooks/data/useUserDirectory' // <-- Added back
-import { Task, UserProfile } from '@/lib/types' // <-- Added UserProfile
+import { useUserDirectory } from '@/hooks/data/useUserDirectory'
+// FIX 1: Add this import back - YOU MUST FIX THIS PATH
+import { useAllProjects } from '@/hooks/data/useAllProjects' 
+// FIX 2: Add Project type back
+import { Task, UserProfile, Project, UserProfileWithId } from '@/lib/types' 
 import { Timestamp } from 'firebase/firestore'
 
-// Helper to format dates
+// --- KEPT ALL LOCAL LOGIC ---
 const formatDate = (date: Date) => {
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -43,26 +45,23 @@ const formatDate = (date: Date) => {
   })
 }
 
-// --- Workload Scoring Logic (no changes) ---
-const calculateWorkloadScore = (task: Task, today: Date): number => {
-  if (task.status === 'done') {
-    return 0
-  }
-  if (!task.deadline) {
-    return 1
-  }
-  const deadline = (task.deadline as Timestamp).toDate()
-  const diffTime = deadline.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) return 20
-  if (diffDays <= 2) return 15
-  if (diffDays <= 7) return 10
-  if (diffDays <= 30) return 5
-  return 2
+const calculateWorkloadScore = (task: Task, today: Date, users: UserProfileWithId[]): number => {
+  if (task.status === 'done') return 0;
+  const assignedUser = users.find(u => u.id === task.assignedTo);
+  const workloadMultiplier = assignedUser?.workloadStatus === 'heavy' ? 1.5 : 1;
+  if (!task.deadline) return 1 * workloadMultiplier;
+  const deadline = (task.deadline as Timestamp).toDate();
+  const diffTime = deadline.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  let score = 0;
+  if (diffDays < 0) score = 20;
+  else if (diffDays <= 2) score = 15;
+  else if (diffDays <= 7) score = 10;
+  else if (diffDays <= 30) score = 5;
+  else score = 2;
+  return score * workloadMultiplier;
 }
 
-// --- Helper to generate colors for users ---
 const FADE_COLORS = [
   '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#387908',
   '#d0ed57', '#a4de6c', '#8dd1e1', '#83a6ed', '#844d00'
@@ -77,130 +76,92 @@ const getUserColor = (userId: string) => {
   return userColorMap.get(userId)!;
 };
 
+
 export default function AnalyticsPage() {
   const router = useRouter()
-  const { currentUser } = useAuth()
+  const { currentUser, userProfile } = useAuth()
 
-  // --- Use new hooks ---
   const { allTasks, loading: tasksLoading } = useAllProjectTasks(currentUser?.uid)
-  const { users, loading: usersLoading } = useUserDirectory() // <-- Added back
-  const loading = tasksLoading || usersLoading
+  const { users, loading: usersLoading } = useUserDirectory()
+  // FIX 3: Add this hook back
+  const { projects, loading: projectsLoading } = useAllProjects(currentUser?.uid)
 
-  // --- Memoized Data Processing ---
+  // FIX 4: Add projectsLoading back
+  const loading = tasksLoading || usersLoading || projectsLoading;
+
   const analyticsData = useMemo(() => {
-    if (!allTasks || allTasks.length === 0 || !currentUser || !users) {
-      return {
-        activeProjects: 0,
-        myActiveTasks: 0,
-        myOverdueTasksCount: 0,
-        myDueThisWeekTasks: [],
-        stackedProjectWorkloadData: [],
-        allUserIdsInChart: [],
-        projectWithMostWorkload: null,
-        projectWithMostOverdue: null,
-      }
+    // FIX 5: Add !projects back to the guard clause
+    if (loading || !currentUser || !users || !projects || !allTasks) {
+      return { activeProjects: 0, myActiveTasks: 0, myOverdueTasksCount: 0, myDueThisWeekTasks: [], stackedProjectWorkloadData: [], allUserIdsInChart: [], projectWithMostWorkload: null, projectWithMostOverdue: null }
     }
+    
+    // FIX 6: Restore projectMap to get names
+    const projectMap = new Map<string, Project>(projects.map((p: Project) => [p.id, p]));
+    
+    // FIX 7: Restore name logic using the projectMap
+    const tasksWithProjectNames = allTasks.map((task: Task) => ({ 
+      ...task, 
+      name: projectMap.get(task.projectId)?.name ?? 'Unknown Project' 
+    }));
+    
+    const today = new Date();
+    const todayAtMidnight = new Date(today.setHours(0, 0, 0, 0));
+    const nextWeek = new Date(todayAtMidnight);
+    nextWeek.setDate(todayAtMidnight.getDate() + 7);
 
-    const today = new Date()
-    const todayAtMidnight = new Date(today.setHours(0, 0, 0, 0))
-    const nextWeek = new Date(todayAtMidnight)
-    nextWeek.setDate(todayAtMidnight.getDate() + 7)
+    const myTasks = tasksWithProjectNames.filter((t) => t.assignedTo === currentUser!.uid);
+    
+    const myActiveTasks = myTasks.filter((t) => t.status !== 'done');
+    const myOverdueTasks = myActiveTasks.filter((t) => t.deadline && (t.deadline as Timestamp).toDate() < todayAtMidnight);
+    const myDueThisWeekTasks = myActiveTasks.filter((t) => { if (!t.deadline) return false; const deadLineDate = (t.deadline as Timestamp).toDate(); return deadLineDate >= todayAtMidnight && deadLineDate <= nextWeek; }).sort((a, b) => (a.deadline as Timestamp).toMillis() - (b.deadline as Timestamp).toMillis());
+    const activeProjects = [...new Set(myActiveTasks.map((t) => t.projectId))].length;
+    const allUserIdsInChart = new Set<string>();
+    
+    const projectStats = tasksWithProjectNames.reduce((acc, task) => {
+      // FIX 8: Restore project status check
+      const project = projectMap.get(task.projectId);
+      if (project?.status === 'onHold') return acc;
+      
+      const score = calculateWorkloadScore(task, todayAtMidnight, users);
+      if (score === 0) return acc;
+      
+      const name = task.name; // This is now the real project name
+      const userId = task.assignedTo === currentUser!.uid ? "You" : task.assignedTo;
+      
+      allUserIdsInChart.add(userId);
+      if (!acc[name]) { acc[name] = { name } }
+      if (!acc[name][userId]) { acc[name][userId] = 0 }
+      acc[name][userId] += score;
+      const isOverdue = task.deadline && (task.deadline as Timestamp).toDate() < todayAtMidnight;
+      if (isOverdue) { if (!acc[name].overdueCount) { acc[name].overdueCount = 0 } acc[name].overdueCount += 1 }
+      return acc;
+    }, {} as Record<string, any>);
+    
+    const stackedProjectWorkloadData = Object.values(projectStats).sort((a, b) => { const scoreA = Object.keys(a).filter(k => k !== 'name' && k !== 'overdueCount').reduce((sum, key) => sum + a[key], 0); const scoreB = Object.keys(b).filter(k => k !== 'name' && k !== 'overdueCount').reduce((sum, key) => sum + b[key], 0); return scoreB - scoreA; });
+    const projectOverdueData = Object.values(projectStats).map(p => ({ name: p.name, overdueCount: p.overdueCount ?? 0 })).sort((a, b) => b.overdueCount - a.overdueCount);
+    const projectWithMostWorkload = stackedProjectWorkloadData[0] ?? null;
+    const projectWithMostOverdue = projectOverdueData[0] && projectOverdueData[0].overdueCount > 0 ? projectOverdueData[0] : null;
+    
+    return { activeProjects, myActiveTasks: myActiveTasks.length, myOverdueTasksCount: myOverdueTasks.length, myDueThisWeekTasks, stackedProjectWorkloadData, allUserIdsInChart: Array.from(allUserIdsInChart), projectWithMostWorkload, projectWithMostOverdue };
+  
+  // FIX 9: Add 'projects' back to dependency array
+  }, [allTasks, currentUser, users, projects, loading]);
 
-    // 1. Get stats for the CURRENT USER (for summary cards)
-    const myTasks = allTasks.filter(
-      (t) => t.assignedTo === currentUser.uid
+
+  // Helper to get user display name for Legend
+  const getUserName = (userId: string) => {
+    if (userId === "You") return "You";
+    return users?.find((u: UserProfileWithId) => u.id === userId)?.displayName ?? userId.substring(0, 5) + '...';
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 w-full items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-green-600" />
+      </div>
     )
-    const myActiveTasks = myTasks.filter((t) => t.status !== 'done')
+  }
 
-    const myOverdueTasks = myActiveTasks.filter(
-      (t) => t.deadline && (t.deadline as Timestamp).toDate() < todayAtMidnight
-    )
-
-    const myDueThisWeekTasks = myActiveTasks
-      .filter((t) => {
-        if (!t.deadline) return false
-        const deadLineDate = (t.deadline as Timestamp).toDate()
-        return deadLineDate >= todayAtMidnight && deadLineDate <= nextWeek
-      })
-      .sort(
-        (a, b) =>
-          (a.deadline as Timestamp).toMillis() -
-          (b.deadline as Timestamp).toMillis()
-      )
-
-    const activeProjects = [
-      ...new Set(myActiveTasks.map((t) => t.projectId)),
-    ].length
-
-    // 2. Calculate comparative workload for STACKED BAR CHART
-    const allUserIdsInChart = new Set<string>()
-    const projectStats = allTasks.reduce((acc, task) => {
-      const score = calculateWorkloadScore(task, todayAtMidnight)
-      if (score === 0) return acc; // Don't process done tasks
-
-      const name = task.name || 'Unknown Project'
-      const userId = task.assignedTo
-
-      allUserIdsInChart.add(userId)
-
-      if (!acc[name]) {
-        acc[name] = { name }
-      }
-      if (!acc[name][userId]) {
-        acc[name][userId] = 0
-      }
-
-      acc[name][userId] += score
-
-      // Also track overdue for suggestions
-      const isOverdue =
-        task.deadline &&
-        (task.deadline as Timestamp).toDate() < todayAtMidnight
-      if (isOverdue) {
-        if (!acc[name].overdueCount) {
-          acc[name].overdueCount = 0
-        }
-        acc[name].overdueCount += 1
-      }
-
-      return acc
-    }, {} as Record<string, any>)
-
-    const stackedProjectWorkloadData = Object.values(projectStats).sort(
-      (a, b) => {
-        const scoreA = Object.keys(a).filter(k => k !== 'name' && k !== 'overdueCount').reduce((sum, key) => sum + a[key], 0);
-        const scoreB = Object.keys(b).filter(k => k !== 'name' && k !== 'overdueCount').reduce((sum, key) => sum + b[key], 0);
-        return scoreB - scoreA;
-      }
-    );
-
-    // --- Data for Suggestions ---
-    const projectOverdueData = Object.values(projectStats)
-      .map(p => ({
-        name: p.name,
-        overdueCount: p.overdueCount || 0
-      }))
-      .sort((a, b) => b.overdueCount - a.overdueCount)
-
-    const projectWithMostWorkload = stackedProjectWorkloadData[0] || null
-    const projectWithMostOverdue =
-      projectOverdueData[0] && projectOverdueData[0].overdueCount > 0
-        ? projectOverdueData[0]
-        : null
-
-    return {
-      activeProjects,
-      myActiveTasks: myActiveTasks.length,
-      myOverdueTasksCount: myOverdueTasks.length,
-      myDueThisWeekTasks,
-      stackedProjectWorkloadData,
-      allUserIdsInChart: Array.from(allUserIdsInChart),
-      projectWithMostWorkload,
-      projectWithMostOverdue,
-    }
-  }, [allTasks, currentUser, users]) // Added users dependency
-
-  // Destructure for easier use
   const {
     activeProjects,
     myActiveTasks,
@@ -211,108 +172,103 @@ export default function AnalyticsPage() {
     projectWithMostWorkload,
     projectWithMostOverdue,
   } = analyticsData
-
-  // Helper to get user display name for Legend
-  const getUserName = (userId: string) => {
-    if (userId === currentUser?.uid) return "You";
-    return users?.find(u => u.id === userId)?.displayName || userId.substring(0, 5) + '...';
-  }
-
-
-  if (loading) {
-    return (
-      <div className="flex h-64 w-full items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-6 p-4 md:p-8">
+  
+return (
+    <div className="flex flex-col gap-6 p-0 md:p-4">
       {/* ===== Header ===== */}
       <div>
-        <h1 className="text-2xl font-semibold mb-1">
+        <h1 className="text-2xl font-semibold mb-1 text-black">
           Well-being & Workload Analytics
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Insights about your personal tasks and project intensity.
+        <p className="text-gray-600 text-sm">
+          Your workload report, calculated from live data.
         </p>
       </div>
 
       {/* ===== Summary Cards (Personal Stats) ===== */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 flex flex-col items-start">
+        <Card className="p-4 flex flex-col items-start bg-white border-2 border-black">
           <Activity className="text-blue-500 mb-2" size={20} />
-          <CardTitle className="text-sm text-muted-foreground">
+          <CardTitle className="text-sm text-gray-600">
             Active Projects
           </CardTitle>
-          <p className="text-xl font-bold">{activeProjects}</p>
+          <p className="text-xl font-bold text-black">{activeProjects}</p>
         </Card>
-
-        <Card className="p-4 flex flex-col items-start">
+        <Card className="p-4 flex flex-col items-start bg-white border-2 border-black">
           <TrendingUp className="text-green-500 mb-2" size={20} />
-          <CardTitle className="text-sm text-muted-foreground">
+          <CardTitle className="text-sm text-gray-600">
             Your Active Tasks
           </CardTitle>
-          <p className="text-xl font-bold">{myActiveTasks}</p>
+          <p className="text-xl font-bold text-black">{myActiveTasks}</p>
         </Card>
-
-        <Card className="p-4 flex flex-col items-start">
+        <Card className="p-4 flex flex-col items-start bg-white border-2 border-black">
           <AlertTriangle className="text-red-500 mb-2" size={20} />
-          <CardTitle className="text-sm text-muted-foreground">
+          <CardTitle className="text-sm text-gray-600">
             Your Overdue Tasks
           </CardTitle>
-          <p className="text-xl font-bold">{myOverdueTasksCount}</p>
+          <p className="text-xl font-bold text-black">{myOverdueTasksCount}</p>
         </Card>
-
-        <Card className="p-4 flex flex-col items-start">
+        <Card className="p-4 flex flex-col items-start bg-white border-2 border-black">
           <CalendarCheck className="text-orange-500 mb-2" size={20} />
-          <CardTitle className="text-sm text-muted-foreground">
+          <CardTitle className="text-sm text-gray-600">
             Your Due This Week
           </CardTitle>
-          <p className="text-xl font-bold">{myDueThisWeekTasks.length}</p>
+          <p className="text-xl font-bold text-black">{myDueThisWeekTasks.length}</p>
         </Card>
       </div>
 
-      {/* ===== MODIFIED: Project Workload Distribution (Stacked) ===== */}
-      <Card>
+      {/* ===== Project Workload Distribution (Stacked) ===== */}
+      <Card className="bg-white border-2 border-black">
         <CardHeader>
-          <CardTitle>Project Workload Distribution</CardTitle>
-          <p className="text-sm text-muted-foreground pt-1">
-            Overall project intensity based on all member tasks and deadlines.
+          <CardTitle className="text-black">Project Workload Distribution</CardTitle>
+          <p className="text-sm text-gray-600 pt-1">
+            Overall project intensity based on all member tasks, deadlines, and user status.
           </p>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             {stackedProjectWorkloadData.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex items-center justify-center h-full text-gray-500">
                 No workload data to display.
               </div>
             ) : (
               <BarChart data={stackedProjectWorkloadData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend formatter={(value, entry) => getUserName(value as string)} />
-                {allUserIdsInChart.map((userId) => (
+                <CartesianGrid stroke="rgba(0, 0, 0, 0.1)" strokeDasharray="3 3" />
+                <XAxis dataKey="name" stroke="#000" tick={{ fill: '#000', fontSize: 12 }} />
+                <YAxis stroke="#000" tick={{ fill: '#000', fontSize: 12 }} />
+                <Tooltip 
+                  wrapperStyle={{
+                    border: '2px solid #000',
+                    backgroundColor: '#fff',
+                    boxShadow: '2px 2px 0px #000',
+                    borderRadius: '0px',
+                  }}
+                  contentStyle={{ color: '#000' }}
+                  labelStyle={{ color: '#000', fontWeight: 'bold' }}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                />
+                
+                <Legend formatter={(value) => getUserName(value as string)} />
+                
+                {allUserIdsInChart.map((userId: string) => (
                   <Bar
                     key={userId}
                     dataKey={userId}
-                    stackId="a" // This groups them into a stack
-                    name={getUserName(userId)} // Name for tooltip
-                    fill={getUserColor(userId)} // Assign color
+                    stackId="a"
+                    name={getUserName(userId)}
+                    fill={getUserColor(userId)}
+                    stroke="#000"
+                    strokeWidth={2}
                   />
                 ))}
               </BarChart>
             )}
           </ResponsiveContainer>
         </CardContent>
-        <CardFooter className="text-sm text-muted-foreground">
+        <CardFooter className="text-sm text-gray-600">
           {projectWithMostWorkload ? (
             <>
-              <b>{projectWithMostWorkload.name}</b> currently has the
-              highest workload.
+              {projectWithMostWorkload.name} currently has the highest workload.
             </>
           ) : (
             'No active projects to analyze.'
@@ -320,12 +276,12 @@ export default function AnalyticsPage() {
         </CardFooter>
       </Card>
 
-      {/* ===== Focus Suggestions (Project-Based) ===== */}
-      <Card className="bg-muted/40">
+      {/* --- Focus Suggestions --- */}
+      <Card className="bg-white border-2 border-black border-dashed">
         <CardHeader>
-          <CardTitle>Focus & Priority Suggestions</CardTitle>
+          <CardTitle className="text-black">Focus & Priority Suggestions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="space-y-3 text-sm text-gray-700">
           {myActiveTasks > 0 ? (
             <>
               {myOverdueTasksCount > 0 && (
@@ -351,7 +307,7 @@ export default function AnalyticsPage() {
                 )}
             </>
           ) : (
-            <p className="text-muted-foreground">
+            <p className="text-gray-500">
               No suggestions available. Enjoy the calm!
             </p>
           )}
@@ -359,26 +315,26 @@ export default function AnalyticsPage() {
       </Card>
 
       {/* ===== Upcoming Deadlines (Personal Stats) ===== */}
-      <Card>
+      <Card className="bg-white border-2 border-black">
         <CardHeader>
-          <CardTitle>Your Upcoming Deadlines</CardTitle>
+          <CardTitle className="text-black">Your Upcoming Deadlines</CardTitle>
         </CardHeader>
         <CardContent>
           {myDueThisWeekTasks.length === 0 ? (
-            <p className="text-muted-foreground">
+            <p className="text-gray-500">
               No tasks due in the next 7 days.
             </p>
           ) : (
             <ul className="space-y-3">
-              {myDueThisWeekTasks.map((task) => (
+              {myDueThisWeekTasks.map((task: Task & { name: string }) => ( 
                 <li
                   key={task.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-md hover:bg-muted/50 border"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border-2 border-black bg-white hover:bg-green-50"
                 >
                   <div>
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {task.name}
+                    <p className="font-medium text-black">{task.title}</p>
+                    <p className="text-sm text-gray-600">
+                      {task.name} {/* This will now show the Project Name */}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-orange-600 mt-2 sm:mt-0">
@@ -391,18 +347,6 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* ===== Action Panel ===== */}
-      <div className="flex justify-between items-center mt-4">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/dashboard/tasks')}
-        >
-          View Task Summary
-        </Button>
-        <Button variant="default" disabled>
-          Start Focus Session (WIP)
-        </Button>
-      </div>
     </div>
   )
 }
