@@ -1,23 +1,28 @@
 'use client'
 
-// 1. Import useState
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Bell, User, LogOut, Loader2, Menu } from 'lucide-react'
-// import { Input } from '@/components/ui/input' // No longer needed
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { auth } from '@/firebaseConfig'
 import { signOut } from 'firebase/auth'
-// import { ThemeToggle } from '@/components/ThemeToggle' // Removed
 import { Chatbot } from './components/Chatbot'
+import Image from 'next/image' // <-- 1. IMPORT IMAGE
 
 import {
   Sheet,
   SheetTrigger,
   SheetContent,
 } from "@/components/ui/sheet"
+
+// --- 2. IMPORT DIALOG ---
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 
 const sidebarLinks = [
@@ -28,7 +33,6 @@ const sidebarLinks = [
   { name: 'Explore Projects', href: '/dashboard/explore' },
 ]
 
-// 2. Define our color options
 const colorOptions = [
   { name: 'Green', class: 'bg-green-50', hex: '#f0fdf4' },
   { name: 'Pink', class: 'bg-pink-50', hex: '#fdf2f8' },
@@ -43,7 +47,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const { currentUser, userProfile, loading } = useAuth()
   
-  // 3. Add state for the background color
   const [bgColor, setBgColor] = useState('bg-green-50')
 
 
@@ -64,7 +67,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
 
-  // Loading State
   if (loading || !currentUser || !userProfile?.onboardingComplete) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
@@ -73,9 +75,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // 4. Apply the state to the root div
   return (
-    <div className={`h-screen w-screen flex overflow-hidden  text-black ${bgColor}`}>
+    <div className={`h-screen w-screen flex overflow-hidden text-black ${bgColor}`}>
 
       {/* --- MOBILE SIDEBAR --- */}
       <Sheet>
@@ -86,8 +87,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </SheetTrigger>
 
         <SheetContent side="left" className="p-0 w-64 bg-white border-r-2 border-black">
-          <aside className="flex flex-col h-fit">
-            <div className="p-4 text-xl font-semibold border-b-2 border-black uppercase tracking-wider">
+          <aside className="flex flex-col h-full">
+            <div className="p-5 text-xl font-semibold border-b-2 border-black uppercase tracking-wider">
               CollabHub
             </div>
 
@@ -107,7 +108,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </Link>
               ))}
 
-              {/* 5. Add Color Swatches (Mobile) */}
               <div className="pt-4 border-t border-gray-200 px-0">
                 <span className="text-xs font-semibold uppercase text-gray-500 px-4">Theme</span>
                 <div className="flex flex-wrap gap-2 pt-3 px-4">
@@ -159,7 +159,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
 
-          {/* 6. Add Color Swatches (Desktop) */}
           <div className="pt-4 border-t border-gray-200 px-0">
             <span className="text-xs font-semibold uppercase text-gray-500 px-4">Theme</span>
             <div className="flex flex-wrap gap-2 pt-3 px-4">
@@ -187,14 +186,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <div className="flex-1 flex flex-col md:ml-64 md:mr-80 h-full overflow-hidden">
+      {/* --- 3. REMOVED MARGIN from middle column --- */}
+      <div className="flex-1 flex flex-col md:ml-64 h-full overflow-hidden">
 
-        <header className="h-18 border-b-2 border-black flex items-center justify-between px-4 md:px-6 bg-white shrink-0 sticky top-0 z-10">
+        <header className="h-16 border-b-2 border-black flex items-center justify-between px-4 md:px-6 bg-white shrink-0 sticky top-0 z-10">
 
-          {/* 7. Removed Search, added CollabHub title */}
           <div className="flex items-center gap-3">
-            <h1 className="text-xl h-fit font-semibold uppercase tracking-wider text-black md:hidden">
+            <h1 className="text-xl font-semibold uppercase tracking-wider text-black md:hidden">
               CollabHub
             </h1>
           </div>
@@ -214,33 +212,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-
-        {/* 8. Apply background state to main content area */}
         <main className={`flex-1 overflow-y-auto p-4 md:p-8 ${bgColor} bg-notebook-grid`}>
           {children}
         </main>
 
       </div>
 
-      {/* --- RIGHT CHATBOT SIDEBAR --- */}
-      <aside className="hidden md:flex w-80 border-l-2 border-black bg-white flex-col fixed right-0 top-0 h-full">
-        <Chatbot />
-      </aside>
+      {/* --- 4. REMOVED desktop and mobile chatbots --- */}
 
-      {/* --- MOBILE CHATBOT --- */}
-      <Sheet>
-        <SheetTrigger asChild>
+      {/* --- 5. ADDED new mascot FAB chatbot --- */}
+      <Dialog>
+        <DialogTrigger asChild>
           <Button
-            className="md:hidden fixed bottom-5 right-5 z-50 rounded-full h-14 w-14 shadow-lg bg-black text-white hover:bg-gray-800 text-2xl"
+            variant="default"
+            className="fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full p-0 shadow-lg border-2 border-black
+                       bg-black text-white 
+                       hover:bg-gray-800 
+                       data-[state=open]:bg-gray-800
+                       focus:ring-2 focus:ring-black focus:ring-offset-2"
           >
-            💬
+            <Image
+              src="/chatbot-mascot.png" // Make sure this path is correct
+              width={48}
+              height={48}
+              alt="Chatbot"
+              className="transform transition-all duration-200 group-data-[state=open]:scale-90"
+            />
           </Button>
-        </SheetTrigger>
-
-        <SheetContent side="right" className="p-0 w-full bg-white border-l-2 border-black">
+        </DialogTrigger>
+        <DialogContent 
+          className="h-[80vh] w-[90vw] max-w-2xl p-0 
+                     bg-white border-2 border-black
+                     data-[state=open]:animate-paper-flip-in 
+                     data-[state=closed]:animate-paper-flip-out"
+          style={{ transformOrigin: 'bottom right' }} // Animation origin
+        >
           <Chatbot />
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
     </div>
   )
