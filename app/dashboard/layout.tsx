@@ -9,20 +9,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { auth } from '@/firebaseConfig'
 import { signOut } from 'firebase/auth'
 import { Chatbot } from './components/Chatbot'
-import Image from 'next/image' // <-- 1. IMPORT IMAGE
+import Image from 'next/image'
 
 import {
   Sheet,
   SheetTrigger,
   SheetContent,
 } from "@/components/ui/sheet"
-
-// --- 2. IMPORT DIALOG ---
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 
 
 const sidebarLinks = [
@@ -186,7 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* --- 3. REMOVED MARGIN from middle column --- */}
+      {/* --- MAIN CONTENT AREA --- */}
       <div className="flex-1 flex flex-col md:ml-64 h-full overflow-hidden">
 
         <header className="h-16 border-b-2 border-black flex items-center justify-between px-4 md:px-6 bg-white shrink-0 sticky top-0 z-10">
@@ -218,11 +211,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       </div>
 
-      {/* --- 4. REMOVED desktop and mobile chatbots --- */}
-
-      {/* --- 5. ADDED new mascot FAB chatbot --- */}
-      <Dialog>
-        <DialogTrigger asChild>
+      {/* --- 4. REPLACED Dialog with Sheet --- */}
+      <Sheet>
+        <SheetTrigger asChild>
           <Button
             variant="default"
             className="fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full p-0 shadow-lg border-2 border-black
@@ -239,17 +230,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="transform transition-all duration-200 group-data-[state=open]:scale-90"
             />
           </Button>
-        </DialogTrigger>
-        <DialogContent 
-          className="h-[80vh] w-[90vw] max-w-2xl p-0 
-                     bg-white border-2 border-black
-                     data-[state=open]:animate-paper-flip-in 
-                     data-[state=closed]:animate-paper-flip-out"
-          style={{ transformOrigin: 'bottom right' }} // Animation origin
+        </SheetTrigger>
+        <SheetContent 
+          side="right"
+          className="p-0 w-full sm:w-96 bg-white border-l-2 border-black
+                     data-[state=open]:animate-paper-flip-in-right 
+                     data-[state=closed]:animate-paper-flip-out-right"
         >
           <Chatbot />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
     </div>
   )
