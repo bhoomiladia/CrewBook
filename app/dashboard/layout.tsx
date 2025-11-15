@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SheetContent side="left" className="p-0 w-64 bg-white border-r-2 border-black">
           <aside className="flex flex-col h-full">
             <div className="p-5 text-xl font-semibold border-b-2 border-black uppercase tracking-wider">
-              CollabHub
+              CrewBook
             </div>
 
             <nav className="flex-1 p-4 space-y-1">
@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* --- DESKTOP SIDEBAR --- */}
       <aside className="hidden md:flex w-64 border-r-2 border-black bg-white flex-col fixed left-0 top-0 h-full">
         <div className="p-5 text-2xl font-semibold border-b-2 border-black text-black uppercase tracking-wider">
-          CollabHub
+          CrewBook
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -186,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold uppercase tracking-wider text-black md:hidden">
-              CollabHub
+              CrewBook
             </h1>
           </div>
 

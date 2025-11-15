@@ -29,7 +29,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
         <div className="p-8">
           <h2 className="text-2xl font-bold mb-2">{isSignUp ? "Create Account" : "Welcome Back"}</h2>
           <p className="text-muted-foreground mb-6">
-            {isSignUp ? "Join CollabHub and start collaborating" : "Sign in to your CollabHub account"}
+            {isSignUp ? "Join CrewBook and start collaborating" : "Sign in to your CrewBook account"}
           </p>
 
           <div className="space-y-4">
